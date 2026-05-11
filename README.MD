@@ -5,10 +5,18 @@
 # SỬ DỤNG WORDPRESS ĐỂ TẠO WEB SITE
 ## deadline : 23h59 ngày 12 tháng 5 năm 2026.
    
-1. SỬ DỤNG DOCKER TRÊN UBUNTU ĐỂ TẠO docker ccompose chứa: 
+1. SỬ DỤNG DOCKER TRÊN UBUNTU ĐỂ TẠO docker compose chứa: 
 - Mariadb: sử dụng **image: mariadb:latest** để làm hệ quản trị csdl cho wordpress
 - Phpmyadmin: sư dụng **image: phpmyadmin:latest** để đăng nhập vào mariadb rồi tạo csdl trống (chỉ để xem, ko cần tạo bảng từ đây, wordpress sẽ làm hết)
 - WordPress: Sử dụng **image: wordpress:latest**, truyền các tham số môi trường cho wordpress là các thông tin truy cập csdl mariadb, tạo bởi Phpmyadmin
+
+Ok. Để thực hiện yêu cầu trên, ta cần:
+
+Trước tiên tạo 1 thư mục project `mkdir web_wordpress` chui vào nó `cd web_wordpress` tạo file docker-compose.yml có nội dung như sau:
+
+
+
+
 
 2. Yêu cầu: sau khi có 3 service này trong file docker-compose.yml :
 - Cấu hình để hệ thống chạy
