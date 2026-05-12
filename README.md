@@ -23,89 +23,99 @@
 
 Ok. Để thực hiện yêu cầu trên, ta cần:
 
-Trước tiên tạo 1 thư mục project `mkdir web_wordpress` chui vào nó `cd web_wordpress` tạo file docker-compose.yml có nội dung như sau:
-<img width="959" height="539" alt="image" src="https://github.com/user-attachments/assets/29e87d67-a86c-4cba-9dce-b8a7cfffffc3" />
+Trước tiên tạo 1 thư mục project `mkdir wordpress_web` chui vào nó `cd web_wordpress` tạo file docker-compose.yml;
+Do là cổng 8080 là được dùng cho dịch cụ phpMyAdmin của bài tập 2, nên bài này phpMyAdmin sẽ dùng cổng 8888, các dịch vụ khác không cần mở cổng, truy cập qua tên service. Các service cũng phải dặt tên khác với các service đã tồn tại.
 
-Do là cổng 8080 là được dùng cho dịch cụ phpMyAdmin của bài tập 2, nên bài này phpMyAdmin sẽ dùng cổng 8088. Tương tự cổng 8000 cũng bị dịch vụ trong bài tập 2 chiếm rồi, wordpress sẽ dùng cổng 8008. Các service cũng phải dặt tên khác với các service đã tồn tại.
+Thêm nữa; em sử dụng luôn tunnel dùng trong bài tập 2 và add route mới;
+<img width="959" height="464" alt="image" src="https://github.com/user-attachments/assets/9909b12c-336d-4e96-b1c1-0b519213fd73" />
+
+Nội dung docker-compose.yml:
 
 ```
-# Khai báo phiên bản định dạng của Docker Compose (3.8 là bản ổn định và phổ biến)
-version: '3.8'
-
-# Định nghĩa các dịch vụ (containers) sẽ chạy trong hệ thống
 services:
-
-  # --- DỊCH VỤ CƠ SỞ DỮ LIỆU ---
-  bt3mariadb:
-    # Sử dụng bản mới nhất của MariaDB làm hệ quản trị CSDL
+  wp_mariadb:
     image: mariadb:latest
-    # Đặt tên cho container để dễ quản lý (thay vì để Docker tự đặt tên ngẫu nhiên)
-    container_name: bt3_mariadb
-    # Tự động khởi động lại container nếu máy chủ reboot hoặc service bị lỗi
+    container_name: wp_mariadb
     restart: always
-    # Thiết lập các thông số môi trường (biến cấu hình bên trong container)
     environment:
-      MYSQL_ROOT_PASSWORD: root_password # Mật khẩu cao nhất của hệ thống CSDL
-      MYSQL_DATABASE: wordpress_db      # Tự động tạo một database tên là wordpress_db
-      MYSQL_USER: hanh               # Tạo một user riêng cho WordPress
-      MYSQL_PASSWORD: 0402       # Mật khẩu cho user trên
-    # Lưu trữ dữ liệu lâu dài (Persistent Data)
+      MYSQL_ROOT_PASSWORD: "123"
+      MYSQL_DATABASE: wordpress_db
+      MYSQL_USER: hanh
+      MYSQL_PASSWORD: "0402"
     volumes:
-      # Gắn vùng nhớ db_data vào thư mục chứa dữ liệu của MariaDB để khi xóa container ko mất data
       - db_data:/var/lib/mysql
 
-  # --- DỊCH VỤ QUẢN LÝ CSDL QUA GIAO DIỆN WEB ---
-  bt3phpmyadmin:
-    # Sử dụng image phpMyAdmin để quản lý MariaDB trực quan hơn
+  wp_phpmyadmin:
     image: phpmyadmin:latest
-    container_name: bt3_phpmyadmin
+    container_name: wp_phpmyadmin
     restart: always
-    # Mở cổng truy cập
     ports:
-      - "8088:80" # Truy cập phpMyAdmin qua địa chỉ http://localhost:8080
+      - "8888:80"
     environment:
-      PMA_HOST: bt3mariadb              # Chỉ định phpMyAdmin kết nối tới service có tên là 'bt3mariadb'
-      MYSQL_ROOT_PASSWORD: 0402 # Dùng pass root để có toàn quyền quản lý
-    # Chỉ chạy phpmyadmin SAU KHI dịch vụ 'bt3mariadb' đã sẵn sàng
+      PMA_HOST: wp_mariadb
     depends_on:
-      - bt3mariadb
+      - wp_mariadb
 
-  # --- DỊCH VỤ WORDPRESS ---
-  wordpress:
-    # Sử dụng image mã nguồn mở WordPress mới nhất
+  wp_wordpress:
     image: wordpress:latest
-    container_name: wordpress
+    container_name: wp_wordpress
     restart: always
-    # Mở cổng truy cập cho Website
-    ports:
-      - "8008:80" # Truy cập web qua địa chỉ http://localhost:8008
+    # Không mở ports vì truy cập qua Cloudflare Tunnel
     environment:
-      WORDPRESS_DB_HOST: bt3mariadb             # Kết nối tới container tên 'bt3mariadb'
-      WORDPRESS_DB_USER: hanh        # User đã tạo ở trên
-      WORDPRESS_DB_PASSWORD: 0402 # Pass đã tạo ở trên
-      WORDPRESS_DB_NAME: wordpress_db   # Database đã tạo ở trên
-    # Lưu trữ code và các file upload (ảnh, video) của người dùng
+      WORDPRESS_DB_HOST: wp_mariadb
+      WORDPRESS_DB_USER: root
+      WORDPRESS_DB_PASSWORD: "123"
+      WORDPRESS_DB_NAME: wordpress_db
     volumes:
       - wp_data:/var/www/html
-    # Đảm bảo database chạy trước thì WordPress mới kết nối được để cài đặt
     depends_on:
-      - bt3mariadb
+      - wp_mariadb
 
-  bt3cloudflared:
+  wp_cloudflared:
     image: cloudflare/cloudflared:latest
-    container_name: bt3_cloudflared
+    container_name: wp_cloudflared
     restart: always
-
-    command: tunnel --no-autoupdate run --token eyJhIjoiNTI0YmRjMzY2YjgzZTg3N2RkMWIxM2MyMGJiNmY1YmIiLCJ0IjoiYWM2YjhiNzYtYjhiYS00ODliLWI3OTYtYWY0MGFjYzk5ZTRkIiwicyI6IlptVmhNV001T0RRdE9UVmhNUzAwTjJRM0xUZzFOREl0WVRjek5UVmlZVGN3TlRsaiJ9
-
+    command: tunnel --no-autoupdate run --token eyJhIjoiNTI0YmRjMzY2YjgzZTg3N2RkMWIxM2MyMGJiNmY1YmIiLCJ0IjoiYWU5NzU2MjktZmEyNi00ZWRmLTkxMjAtNmNhODlkOGVkOWUwIiwicyI6Ill6ZzBZekU1T1RVdFpXUXlOaTAwTnpjM0xUZ3pZVFV0WWpJNVlqWXpORGsxWmpnNSJ9
     depends_on:
-      - wordpress
+      - wp_wordpress
 
-
-# Khai báo các vùng lưu trữ dữ liệu (volumes) độc lập với vòng đời của container
 volumes:
-  db_data: # Nơi lưu trữ dữ liệu database thực sự
-  wp_data: # Nơi lưu trữ mã nguồn và ảnh/video của web
+  db_data:
+  wp_data:
 ```
 
+Sau khi `sudo docker compose up -d` ta truy cập https://lvhblog.firstmydm.io.vn/ ta được:
 
+Chọn ngôn ngữ:
+<img width="959" height="497" alt="image" src="https://github.com/user-attachments/assets/720f6304-6ecc-41b2-93b1-c1f69b55f03e" />
+
+Tạo tài khoản, đặt mật khẩu đơn giản cho nhanh:
+<img width="959" height="443" alt="image" src="https://github.com/user-attachments/assets/2800d05d-5ebe-4075-8c69-4d6264b876da" />
+
+<img width="959" height="467" alt="image" src="https://github.com/user-attachments/assets/efc71815-67e1-4ea1-86e3-0d503a578496" />
+
+Đăng nhập tài khoản vừa tạo:
+<img width="959" height="440" alt="image" src="https://github.com/user-attachments/assets/441df731-cfc9-4771-86a0-1ad9e9dd9e01" />
+
+Trang giao diện khi vừa vào:
+<img width="959" height="506" alt="image" src="https://github.com/user-attachments/assets/d371322b-4406-484e-a1c7-bc9168abe42a" />
+
+Tạo 1 vài bài posts:
+<img width="959" height="500" alt="image" src="https://github.com/user-attachments/assets/b33bb0e8-cd3e-4537-8e0c-aaaa2bb1c15d" />
+
+View posts ta được:
+<img width="959" height="481" alt="image" src="https://github.com/user-attachments/assets/61a36c50-5dd7-49a3-9890-d2221cd0ee03" />
+
+Tạo thêm 1 bài posts khác:
+<img width="959" height="485" alt="image" src="https://github.com/user-attachments/assets/d4bcab69-7f38-4ce8-902f-93d13d77c8d8" />
+
+<img width="950" height="495" alt="image" src="https://github.com/user-attachments/assets/16540eab-6905-4d7e-85a4-0a49863ce722" />
+
+<img width="959" height="510" alt="image" src="https://github.com/user-attachments/assets/ac7266b2-5859-4b94-b413-1b55d80ea815" />
+
+Nhận xét về việc sử dụng WordPress:
+- Về công sức: Việc triển khai qua Docker giúp tiết kiệm rất nhiều thời gian so với cài đặt thủ công. WordPress cung cấp sẵn khung sườn, chỉ mất khoảng 30 phút để có một website hoàn chỉnh với đầy đủ tính năng CMS.
+- Độ khó: Rất dễ sử dụng đối với người dùng cuối nhờ trình soạn thảo Gutenberg (kéo thả block). Tuy nhiên, để cấu hình tối ưu trên Docker thì cần kiến thức vững về Network và Container.
+- Tài nguyên máy chủ (RAM/CPU): * RAM: Qua kiểm tra bằng lệnh docker stats, hệ thống tiêu tốn tổng cộng khoảng 450MB - 520MB RAM (MariaDB chiếm nhiều nhất khoảng 200MB, WordPress khoảng 150MB, còn lại là PhpMyAdmin và Cloudflared).
++ CPU: Rất nhẹ, dao động từ 0.1% - 1% khi ở trạng thái nghỉ.
++ SSH/Storage: Toàn bộ Image Docker chiếm khoảng 1.2GB ổ cứng.
